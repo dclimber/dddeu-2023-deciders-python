@@ -9,14 +9,6 @@ class Bulb(Decider):
 
     # -- Methods --
     @classmethod
-    def decide(cls, command: Command, state: State) -> list[Event]:
-        return command.decide(state)
-
-    @classmethod
-    def evolve(cls, state: State, event: Event) -> State:
-        return state.evolve(event)
-
-    @classmethod
     def initial_state(cls) -> State:
         return cls.NotFittedState()
 

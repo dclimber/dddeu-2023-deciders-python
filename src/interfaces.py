@@ -6,23 +6,22 @@ class Event(abc.ABC):
 
 
 class State(abc.ABC):
-    pass
 
     @abc.abstractmethod
     def evolve(self, event: Event) -> "State":
-        pass
+        raise NotImplementedError()
 
 
 class Command(abc.ABC):
     @abc.abstractmethod
     def decide(self, state: State) -> list[Event]:
-        pass
+        raise NotImplementedError()
 
 
 class Policy(abc.ABC):
     @abc.abstractmethod
     def react(self, event: Event) -> list[Command]:
-        pass
+        raise NotImplementedError()
 
 
 class Decider(abc.ABC):
@@ -30,20 +29,18 @@ class Decider(abc.ABC):
 
     @classmethod
     @abc.abstractmethod
-    def decide(cls, command: Command, state: State) -> list[Event]:
-        pass
-
-    @classmethod
-    @abc.abstractmethod
-    def evolve(cls, state: State, event: Event) -> State:
-        pass
-
-    @classmethod
-    @abc.abstractmethod
     def initial_state(cls) -> State:
-        pass
+        raise NotImplementedError()
 
     @classmethod
     @abc.abstractmethod
     def is_terminal(cls, state: State) -> bool:
-        pass
+        raise NotImplementedError()
+
+    @classmethod
+    def decide(cls, command: Command, state: State) -> list[Event]:
+        return command.decide(state)
+
+    @classmethod
+    def evolve(cls, state: State, event: Event) -> State:
+        return state.evolve(event)

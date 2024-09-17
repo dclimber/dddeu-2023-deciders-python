@@ -3,6 +3,7 @@ import unittest
 from deciders.bulb import Bulb
 from deciders.cat import Cat
 from infra import (
+    EventSourcingDecider,
     InMemoryDecider,
     StateBasedDecider,
     bulb_deserializer,
@@ -18,6 +19,7 @@ class BulbTests(unittest.TestCase):
         self.deciders = [
             InMemoryDecider(Bulb),
             StateBasedDecider(Bulb, bulb_serializer, bulb_deserializer, {}, "bulb"),
+            EventSourcingDecider(Bulb, "bulb"),
         ]
 
     def test_fit_bulb(self):
@@ -114,6 +116,7 @@ class CatTests(unittest.TestCase):
         self.deciders = [
             InMemoryDecider(Cat),
             StateBasedDecider(Cat, cat_serializer, cat_deserializer, {}, "cat"),
+            EventSourcingDecider(Cat, "cat"),
         ]
 
     def test_is_terminal(self):

@@ -38,3 +38,9 @@ class Aggregate(abc.ABC):
     @classmethod
     def evolve(cls, state: State, event: Event) -> State:
         return state.evolve(event)
+
+
+class Decider(abc.ABC):
+    @abc.abstractmethod
+    def decide(self, command: Command, state: State) -> list[Event]:
+        raise NotImplementedError()

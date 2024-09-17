@@ -3,7 +3,7 @@ from typing import Type
 import interfaces
 
 
-class InMemoryDecider:
+class InMemoryDecider(interfaces.Decider):
 
     def __init__(self, decider: Type[interfaces.Aggregate]) -> None:
         self.decider = decider

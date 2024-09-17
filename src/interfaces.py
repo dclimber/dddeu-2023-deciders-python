@@ -18,12 +18,6 @@ class Command(abc.ABC):
         raise NotImplementedError()
 
 
-class Policy(abc.ABC):
-    @abc.abstractmethod
-    def react(self, event: Event) -> list[Command]:
-        raise NotImplementedError()
-
-
 class Decider(abc.ABC):
     # TODO: Differentiate between input and ouput states
 

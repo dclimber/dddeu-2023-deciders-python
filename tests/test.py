@@ -2,10 +2,8 @@ import unittest
 
 from deciders.bulb import Bulb
 from deciders.cat import Cat
-from infra import (
-    EventSourcingDecider,
-    InMemoryDecider,
-    StateBasedDecider,
+from infra import EventSourcingDecider, InMemoryDecider, StateBasedDecider
+from serializers import (
     bulb_deserializer,
     bulb_serializer,
     cat_deserializer,

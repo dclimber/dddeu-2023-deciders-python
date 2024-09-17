@@ -11,6 +11,13 @@ class InMemoryDecider:
 
     def decide(self, command: interfaces.Command) -> list[interfaces.Event]:
         events = self.decider.decide(command, self.state)
-        for event in events:
-            self.state = self.decider.evolve(self.state, event)
+        self.state = self.fold(self.state, events)
         return events
+
+    def fold(
+        self, start_state: interfaces.State, events: list[interfaces.Event]
+    ) -> interfaces.State:
+        state = start_state
+        for event in events:
+            state = self.decider.evolve(state, event)
+        return state

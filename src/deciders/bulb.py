@@ -1,11 +1,11 @@
 import dataclasses
 from typing import Literal
 
-from interfaces import Command, Decider, Event, State
+from interfaces import Aggregate, Command, Event, State
 
 
 # ---- Implementations ----
-class Bulb(Decider):
+class Bulb(Aggregate):
 
     # -- Methods --
     @classmethod

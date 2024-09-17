@@ -5,7 +5,7 @@ import interfaces
 
 class InMemoryDecider:
 
-    def __init__(self, decider: Type[interfaces.Decider]) -> None:
+    def __init__(self, decider: Type[interfaces.Aggregate]) -> None:
         self.decider = decider
         self.state: interfaces.State = self.decider.initial_state()
 

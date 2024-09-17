@@ -1,6 +1,6 @@
 import unittest
 
-from deciders import Bulb
+from deciders.bulb import Bulb
 from infra import InMemoryDecider
 
 
@@ -61,14 +61,13 @@ class BulbTests(unittest.TestCase):
         result = self.decider.decide(Bulb.SwitchOnCommand())
 
         # Then I get the Bulb Blew event
-        expected_events = []
+        expected_events = [Bulb.BlewEvent()]
         self.assertEqual(result, expected_events)
 
     def test_blown_bulb_does_not_react_to_commands(self):
         # Given a blown bulb
-        self.decider.decide(Bulb.FitCommand(max_uses=1))
+        self.decider.decide(Bulb.FitCommand(max_uses=0))
         self.decider.decide(Bulb.SwitchOnCommand())
-        self.decider.decide(Bulb.SwitchOffCommand())
 
         # When I switch on the bulb
         command = Bulb.SwitchOnCommand()

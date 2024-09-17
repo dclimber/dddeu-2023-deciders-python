@@ -1,6 +1,7 @@
 import unittest
 
 from deciders.bulb import Bulb
+from deciders.cat import Cat
 from infra import InMemoryDecider
 
 
@@ -85,3 +86,53 @@ class BulbTests(unittest.TestCase):
     def test_blown_state_is_terminal(self):
         self.assertTrue(Bulb.is_terminal(Bulb.BlownState()))
         self.assertFalse(Bulb.is_terminal(Bulb.NotFittedState()))
+
+
+class CatTests(unittest.TestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.decider = InMemoryDecider(Cat)
+
+    def test_is_terminal(self):
+        self.assertFalse(Cat.is_terminal(Cat.AwakeState()))
+        self.assertFalse(Cat.is_terminal(Cat.AsleepState()))
+
+    def test_initial_state_view(self):
+        # Given no events
+        # When I ask for the initial state
+        # Then I get the initial state
+        self.assertEqual(Cat.initial_state(), Cat.AwakeState())
+
+    def test_wake_up_command_initial_state_change(self):
+        # Given no events
+        # When I command the cat to wake up
+        command = Cat.WakeUpCommand()
+        result = self.decider.decide(command)
+        # Then nothing happens, as the cat is awake
+        self.assertEqual(result, [])
+
+    def test_go_to_sleep_command_state_change(self):
+        # Given no events
+        # When I command the cat to go to sleep
+        command = Cat.GoToSleepCommand()
+        result = self.decider.decide(command)
+        # Then cat goes to leep
+        self.assertEqual(result, [Cat.GotToSleepEvent()])
+
+    def test_got_to_sleep_state_view(self):
+        # Given cat is asleep
+        command = Cat.GoToSleepCommand()
+        self.decider.decide(command)
+        # When I ask for the state
+        # Then I get the cat is asleep
+        self.assertEqual(self.decider.state, Cat.AsleepState())
+
+    def test_wake_up_command_state_change(self):
+        # Given cat is asleep
+        command = Cat.GoToSleepCommand()
+        self.decider.decide(command)
+        # When I command the cat to wake up
+        command = Cat.WakeUpCommand()
+        result = self.decider.decide(command)
+        # Then cat wakes up
+        self.assertEqual(result, [Cat.WokeUpEvent()])

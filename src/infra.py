@@ -5,12 +5,12 @@ import interfaces
 
 class InMemoryDecider(interfaces.Decider):
 
-    def __init__(self, decider: Type[interfaces.Aggregate]) -> None:
-        self.decider = decider
-        self.state: interfaces.State = self.decider.initial_state()
+    def __init__(self, aggregate: Type[interfaces.Aggregate]) -> None:
+        self.aggregate = aggregate
+        self.state: interfaces.State = self.aggregate.initial_state()
 
     def decide(self, command: interfaces.Command) -> list[interfaces.Event]:
-        events = self.decider.decide(command, self.state)
+        events = self.aggregate.decide(command, self.state)
         for event in events:
-            self.state = self.decider.evolve(self.state, event)
+            self.state = self.aggregate.evolve(self.state, event)
         return events

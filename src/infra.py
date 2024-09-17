@@ -6,6 +6,17 @@ import interfaces
 from deciders import bulb, cat
 
 
+def fold(
+    evolve_function: Callable[[interfaces.State, interfaces.Event], interfaces.State],
+    initial_state: interfaces.State,
+    events: list[interfaces.Event],
+) -> interfaces.State:
+    state = initial_state
+    for event in events:
+        state = evolve_function(state, event)
+    return state
+
+
 class InMemoryDecider(interfaces.Decider):
 
     def __init__(self, aggregate: Type[interfaces.Aggregate]) -> None:
@@ -14,8 +25,7 @@ class InMemoryDecider(interfaces.Decider):
 
     def decide(self, command: interfaces.Command) -> list[interfaces.Event]:
         events = self.aggregate.decide(command, self.state)
-        for event in events:
-            self.state = self.aggregate.evolve(self.state, event)
+        self.state = fold(self.aggregate.evolve, self.state, events)
         return events
 
 
@@ -87,8 +97,7 @@ class StateBasedDecider(interfaces.Decider):
             state = self.deserializer(stored_value.state)
             etag = stored_value.etag
         events = self.aggregate.decide(command, state)
-        for event in events:
-            state = self.aggregate.evolve(state, event)
+        state = fold(self.aggregate.evolve, state, events)
         self.__store(state, etag)
         return events
 
@@ -102,3 +111,63 @@ class StateBasedDecider(interfaces.Decider):
         self.container[self.key] = StateBasedDecider.StoredValue(
             state=self.serializer(state), etag=etag
         )
+
+
+class EventSourcingDecider(interfaces.Decider):
+    @dataclasses.dataclass()
+    class EventsStream:
+        events: list[interfaces.Event] = dataclasses.field(default_factory=list)
+        version: int = 0
+
+    class DictBasedEventStore:
+        def __init__(self) -> None:
+            self.storage: dict[str, "EventSourcingDecider.EventsStream"] = {}
+
+        def load_stream(self, key: str) -> "EventSourcingDecider.EventsStream":
+            if key not in self.storage:
+                return EventSourcingDecider.EventsStream()
+            return self.storage[key]
+
+        def append_to_stream(
+            self,
+            key: str,
+            expected_version: int,
+            events: list[interfaces.Event],
+        ) -> None:
+            if expected_version > 0:
+                current_stream = self.storage[key]
+                if current_stream.version != expected_version:
+                    raise RuntimeError("Concurrent stream write")
+                current_stream.version += len(events)
+                current_stream.events.extend(events)
+                self.storage[key] = current_stream
+            else:
+                stream = EventSourcingDecider.EventsStream(events, len(events))
+                self.storage[key] = stream
+
+    def __init__(self, aggregate: interfaces.Aggregate, key: str) -> None:
+        self.event_store = EventSourcingDecider.DictBasedEventStore()
+        self.key = key
+        self.aggregate = aggregate
+
+    def decide(self, command: interfaces.Command) -> list[interfaces.Event]:
+        event_stream = self.event_store.load_stream(self.key)
+        if event_stream.version == 0:
+            state = self.aggregate.initial_state()
+        else:
+            state = fold(
+                self.aggregate.evolve,
+                self.aggregate.initial_state(),
+                event_stream.events,
+            )
+        events = self.aggregate.decide(command, state)
+        self.event_store.append_to_stream(self.key, event_stream.version, events)
+        return events
+
+    @property
+    def state(self) -> interfaces.State:
+        event_stream = self.event_store.load_stream(self.key)
+        state = fold(
+            self.aggregate.evolve, self.aggregate.initial_state(), event_stream.events
+        )
+        return state

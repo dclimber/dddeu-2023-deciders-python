@@ -1,5 +1,6 @@
 import unittest
 
+from decider import compose_decider_aggregates
 from deciders.bulb import Bulb
 from deciders.cat import Cat
 from infra import EventSourcingDecider, InMemoryDecider, StateBasedDecider
@@ -14,10 +15,13 @@ from serializers import (
 class BulbTests(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
+        self.cat_and_bulb = compose_decider_aggregates(Cat, Bulb)
+
         self.deciders = [
             InMemoryDecider(Bulb),
             StateBasedDecider(Bulb, bulb_serializer, bulb_deserializer, {}, "bulb"),
             EventSourcingDecider(Bulb, "bulb"),
+            InMemoryDecider(self.cat_and_bulb),
         ]
 
     def test_fit_bulb(self):

@@ -2,7 +2,21 @@ import abc
 from typing import List
 
 
-class DeciderAggregate(abc.ABC):
+# Define a custom metaclass that enforces the presence of type aliases
+class DeciderMeta(abc.ABCMeta):
+    def __new__(mcs, name, bases, namespace, **kwargs):
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+
+        # Check for required TypeAliases
+        required_aliases = ["State", "Command", "Event"]
+        for alias in required_aliases:
+            if not hasattr(cls, alias):
+                raise TypeError(f"Class {name} must define a type alias for '{alias}'")
+
+        return cls
+
+
+class DeciderAggregate(metaclass=DeciderMeta):
     # TODO: Differentiate between input and ouput states
     class Event(abc.ABC):
         pass

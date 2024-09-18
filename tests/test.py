@@ -116,10 +116,14 @@ class BulbTests(unittest.TestCase):
 class CatTests(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
+        self.cat_and_bulb = compose_decider_aggregates(Cat, Bulb)
+
         self.deciders = [
             InMemoryDecider(Cat),
             StateBasedDecider(Cat, cat_serializer, cat_deserializer, {}, "cat"),
             EventSourcingDecider(Cat, "cat"),
+            InMemoryDecider(self.cat_and_bulb),
+            EventSourcingDecider(self.cat_and_bulb, "cat_and_bulb"),
         ]
 
     def test_is_terminal(self):

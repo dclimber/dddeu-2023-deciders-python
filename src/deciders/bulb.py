@@ -1,5 +1,5 @@
 import dataclasses
-from typing import List, Literal, TypeAlias
+from typing import List, Literal
 
 from interfaces import DeciderAggregate
 
@@ -7,9 +7,14 @@ from interfaces import DeciderAggregate
 # ---- Implementations ----
 class Bulb(DeciderAggregate):
 
-    Event: TypeAlias = DeciderAggregate.Event
-    Command: TypeAlias = DeciderAggregate.Command
-    State: TypeAlias = DeciderAggregate.State
+    class Event(DeciderAggregate.Event):
+        pass
+
+    class Command(DeciderAggregate.Command):
+        pass
+
+    class State(DeciderAggregate.State):
+        pass
 
     # -- Methods --
     @classmethod

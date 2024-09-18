@@ -1,25 +1,24 @@
 import abc
-
-
-class Event(abc.ABC):
-    pass
-
-
-class State(abc.ABC):
-
-    @abc.abstractmethod
-    def evolve(self, event: Event) -> "State":
-        raise NotImplementedError()
-
-
-class Command(abc.ABC):
-    @abc.abstractmethod
-    def decide(self, state: State) -> list[Event]:
-        raise NotImplementedError()
+from typing import List
 
 
 class DeciderAggregate(abc.ABC):
     # TODO: Differentiate between input and ouput states
+    class Event(abc.ABC):
+        pass
+
+    class State(abc.ABC):
+
+        @abc.abstractmethod
+        def evolve(self, event: "DeciderAggregate.Event") -> "DeciderAggregate.State":
+            raise NotImplementedError()
+
+    class Command(abc.ABC):
+        @abc.abstractmethod
+        def decide(
+            self, state: "DeciderAggregate.State"
+        ) -> List["DeciderAggregate.Event"]:
+            raise NotImplementedError()
 
     @classmethod
     @abc.abstractmethod
@@ -32,7 +31,7 @@ class DeciderAggregate(abc.ABC):
         raise NotImplementedError()
 
     @classmethod
-    def decide(cls, command: Command, state: State) -> list[Event]:
+    def decide(cls, command: Command, state: State) -> List[Event]:
         return command.decide(state)
 
     @classmethod
@@ -42,5 +41,7 @@ class DeciderAggregate(abc.ABC):
 
 class Decider(abc.ABC):
     @abc.abstractmethod
-    def decide(self, command: Command, state: State) -> list[Event]:
+    def decide(
+        self, command: DeciderAggregate.Command, state: DeciderAggregate.State
+    ) -> List[DeciderAggregate.Event]:
         raise NotImplementedError()

@@ -6,10 +6,13 @@ import interfaces
 
 
 def fold(
-    evolve_function: Callable[[interfaces.State, interfaces.Event], interfaces.State],
-    initial_state: interfaces.State,
-    events: list[interfaces.Event],
-) -> interfaces.State:
+    evolve_function: Callable[
+        [interfaces.DeciderAggregate.State, interfaces.DeciderAggregate.Event],
+        interfaces.DeciderAggregate.State,
+    ],
+    initial_state: interfaces.DeciderAggregate.State,
+    events: list[interfaces.DeciderAggregate.Event],
+) -> interfaces.DeciderAggregate.State:
     state = initial_state
     for event in events:
         state = evolve_function(state, event)
@@ -20,9 +23,11 @@ class InMemoryDecider(interfaces.Decider):
 
     def __init__(self, aggregate: Type[interfaces.DeciderAggregate]) -> None:
         self.aggregate = aggregate
-        self.state: interfaces.State = self.aggregate.initial_state()
+        self.state: interfaces.DeciderAggregate.State = self.aggregate.initial_state()
 
-    def decide(self, command: interfaces.Command) -> list[interfaces.Event]:
+    def decide(
+        self, command: interfaces.DeciderAggregate.Command
+    ) -> list[interfaces.DeciderAggregate.Event]:
         events = self.aggregate.decide(command, self.state)
         self.state = fold(self.aggregate.evolve, self.state, events)
         return events
@@ -37,8 +42,8 @@ class StateBasedDecider(interfaces.Decider):
     def __init__(
         self,
         aggregate: Type[interfaces.DeciderAggregate],
-        serializer: Callable[[interfaces.State], str],
-        deserializer: Callable[[str], interfaces.State],
+        serializer: Callable[[interfaces.DeciderAggregate.State], str],
+        deserializer: Callable[[str], interfaces.DeciderAggregate.State],
         container: dict[str, StoredValue],
         key: str,
     ) -> None:
@@ -48,7 +53,9 @@ class StateBasedDecider(interfaces.Decider):
         self.deserializer = deserializer
         self.key = key
 
-    def decide(self, command: interfaces.Command) -> list[interfaces.Event]:
+    def decide(
+        self, command: interfaces.DeciderAggregate.Command
+    ) -> list[interfaces.DeciderAggregate.Event]:
         stored_value: StateBasedDecider.StoredValue | None = self.container.get(
             self.key
         )
@@ -64,10 +71,12 @@ class StateBasedDecider(interfaces.Decider):
         return events
 
     @property
-    def state(self) -> interfaces.State:
+    def state(self) -> interfaces.DeciderAggregate.State:
         return self.deserializer(self.container[self.key].state)
 
-    def __store(self, state: interfaces.State, etag: uuid.UUID) -> None:
+    def __store(
+        self, state: interfaces.DeciderAggregate.State, etag: uuid.UUID
+    ) -> None:
         if self.key in self.container and self.container[self.key].etag != etag:
             raise ValueError("ETag mismatch")
         self.container[self.key] = StateBasedDecider.StoredValue(
@@ -78,7 +87,9 @@ class StateBasedDecider(interfaces.Decider):
 class EventSourcingDecider(interfaces.Decider):
     @dataclasses.dataclass()
     class EventsStream:
-        events: list[interfaces.Event] = dataclasses.field(default_factory=list)
+        events: list[interfaces.DeciderAggregate.Event] = dataclasses.field(
+            default_factory=list
+        )
         version: int = 0
 
     class DictBasedEventStore:
@@ -94,7 +105,7 @@ class EventSourcingDecider(interfaces.Decider):
             self,
             key: str,
             expected_version: int,
-            events: list[interfaces.Event],
+            events: list[interfaces.DeciderAggregate.Event],
         ) -> None:
             if expected_version > 0:
                 current_stream = self.storage[key]
@@ -112,7 +123,9 @@ class EventSourcingDecider(interfaces.Decider):
         self.key = key
         self.aggregate = aggregate
 
-    def decide(self, command: interfaces.Command) -> list[interfaces.Event]:
+    def decide(
+        self, command: interfaces.DeciderAggregate.Command
+    ) -> list[interfaces.DeciderAggregate.Event]:
         event_stream = self.event_store.load_stream(self.key)
         if event_stream.version == 0:
             state = self.aggregate.initial_state()
@@ -127,7 +140,7 @@ class EventSourcingDecider(interfaces.Decider):
         return events
 
     @property
-    def state(self) -> interfaces.State:
+    def state(self) -> interfaces.DeciderAggregate.State:
         event_stream = self.event_store.load_stream(self.key)
         state = fold(
             self.aggregate.evolve, self.aggregate.initial_state(), event_stream.events

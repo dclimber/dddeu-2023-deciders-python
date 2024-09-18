@@ -1,10 +1,15 @@
 import dataclasses
+from typing import List, TypeAlias
 
-from interfaces import Command, DeciderAggregate, Event, State
+from interfaces import DeciderAggregate
 
 
 # ---- Implementations ----
 class Cat(DeciderAggregate):
+
+    Event: TypeAlias = DeciderAggregate.Event
+    Command: TypeAlias = DeciderAggregate.Command
+    State: TypeAlias = DeciderAggregate.State
 
     # -- Methods --
     @classmethod
@@ -18,13 +23,13 @@ class Cat(DeciderAggregate):
     # -- Commands --
     class WakeUpCommand(Command):
 
-        def decide(self, state: State) -> list[Event]:
+        def decide(self, state: "Cat.State") -> List["Cat.Event"]:
             if isinstance(state, Cat.AsleepState):
                 return [Cat.WokeUpEvent()]
             return []
 
     class GoToSleepCommand(Command):
-        def decide(self, state: State) -> list[Event]:
+        def decide(self, state: "Cat.State") -> List["Cat.Event"]:
             if isinstance(state, Cat.AwakeState):
                 return [Cat.GotToSleepEvent()]
             return []
@@ -43,7 +48,7 @@ class Cat(DeciderAggregate):
     class AsleepState(State):
         sound: str = "meow"
 
-        def evolve(self, event: Event) -> State:
+        def evolve(self, event: "Cat.Event") -> "Cat.State":
             if isinstance(event, Cat.WokeUpEvent):
                 return Cat.AwakeState()
             raise Exception(f"Unknown event `{event}`")
@@ -52,7 +57,7 @@ class Cat(DeciderAggregate):
     class AwakeState(State):
         sound: str = "purr"
 
-        def evolve(self, event: Event) -> State:
+        def evolve(self, event: "Cat.Event") -> "Cat.State":
             if isinstance(event, Cat.GotToSleepEvent):
                 return Cat.AsleepState()
             raise Exception(f"Unknown event `{event}`")

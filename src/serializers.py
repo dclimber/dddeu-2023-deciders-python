@@ -2,7 +2,7 @@ import interfaces
 from deciders import bulb, cat
 
 
-def cat_serializer(state: interfaces.State) -> str:
+def cat_serializer(state: interfaces.DeciderAggregate.State) -> str:
     if isinstance(state, cat.Cat.AsleepState):
         return "asleep"
     if isinstance(state, cat.Cat.AwakeState):
@@ -10,7 +10,7 @@ def cat_serializer(state: interfaces.State) -> str:
     raise Exception(f"Unknown state: {state}")
 
 
-def cat_deserializer(text: str) -> interfaces.State:
+def cat_deserializer(text: str) -> interfaces.DeciderAggregate.State:
     if text == "asleep":
         return cat.Cat.AsleepState()
     if text == "awake":
@@ -18,7 +18,7 @@ def cat_deserializer(text: str) -> interfaces.State:
     raise Exception(f"Unknown state: {text}")
 
 
-def bulb_serializer(state: interfaces.State) -> str:
+def bulb_serializer(state: interfaces.DeciderAggregate.State) -> str:
     if isinstance(state, bulb.Bulb.NotFittedState):
         return "not_fitted"
     if isinstance(state, bulb.Bulb.WorkingState):
@@ -28,7 +28,7 @@ def bulb_serializer(state: interfaces.State) -> str:
     raise Exception(f"Unknown state: {state}")
 
 
-def bulb_deserializer(text: str) -> interfaces.State:
+def bulb_deserializer(text: str) -> interfaces.DeciderAggregate.State:
     if text == "not_fitted":
         return bulb.Bulb.NotFittedState()
     if text.startswith("working:"):

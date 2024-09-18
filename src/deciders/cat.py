@@ -1,10 +1,10 @@
 import dataclasses
 
-from interfaces import Aggregate, Command, Event, State
+from interfaces import Command, DeciderAggregate, Event, State
 
 
 # ---- Implementations ----
-class Cat(Aggregate):
+class Cat(DeciderAggregate):
 
     # -- Methods --
     @classmethod

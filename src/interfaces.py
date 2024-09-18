@@ -18,7 +18,7 @@ class Command(abc.ABC):
         raise NotImplementedError()
 
 
-class Aggregate(abc.ABC):
+class DeciderAggregate(abc.ABC):
     # TODO: Differentiate between input and ouput states
 
     @classmethod

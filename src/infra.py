@@ -18,7 +18,7 @@ def fold(
 
 class InMemoryDecider(interfaces.Decider):
 
-    def __init__(self, aggregate: Type[interfaces.Aggregate]) -> None:
+    def __init__(self, aggregate: Type[interfaces.DeciderAggregate]) -> None:
         self.aggregate = aggregate
         self.state: interfaces.State = self.aggregate.initial_state()
 
@@ -36,7 +36,7 @@ class StateBasedDecider(interfaces.Decider):
 
     def __init__(
         self,
-        aggregate: Type[interfaces.Aggregate],
+        aggregate: Type[interfaces.DeciderAggregate],
         serializer: Callable[[interfaces.State], str],
         deserializer: Callable[[str], interfaces.State],
         container: dict[str, StoredValue],
@@ -107,7 +107,7 @@ class EventSourcingDecider(interfaces.Decider):
                 stream = EventSourcingDecider.EventsStream(events, len(events))
                 self.storage[key] = stream
 
-    def __init__(self, aggregate: interfaces.Aggregate, key: str) -> None:
+    def __init__(self, aggregate: interfaces.DeciderAggregate, key: str) -> None:
         self.event_store = EventSourcingDecider.DictBasedEventStore()
         self.key = key
         self.aggregate = aggregate

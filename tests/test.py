@@ -22,6 +22,7 @@ class BulbTests(unittest.TestCase):
             StateBasedDecider(Bulb, bulb_serializer, bulb_deserializer, {}, "bulb"),
             EventSourcingDecider(Bulb, "bulb"),
             InMemoryDecider(self.cat_and_bulb),
+            EventSourcingDecider(self.cat_and_bulb, "cat_and_bulb"),
         ]
 
     def test_fit_bulb(self):

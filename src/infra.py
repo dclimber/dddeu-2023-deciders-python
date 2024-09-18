@@ -25,6 +25,9 @@ class InMemoryDecider(interfaces.Decider):
         self.aggregate = aggregate
         self.state: interfaces.DeciderAggregate.State = self.aggregate.initial_state()
 
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({self.aggregate})"
+
     def decide(
         self, command: interfaces.DeciderAggregate.Command
     ) -> list[interfaces.DeciderAggregate.Event]:
@@ -52,6 +55,9 @@ class StateBasedDecider(interfaces.Decider):
         self.serializer = serializer
         self.deserializer = deserializer
         self.key = key
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({self.aggregate})"
 
     def decide(
         self, command: interfaces.DeciderAggregate.Command
@@ -122,6 +128,9 @@ class EventSourcingDecider(interfaces.Decider):
         self.event_store = EventSourcingDecider.DictBasedEventStore()
         self.key = key
         self.aggregate = aggregate
+
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}({self.aggregate})"
 
     def decide(
         self, command: interfaces.DeciderAggregate.Command

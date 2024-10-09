@@ -33,6 +33,7 @@ class BulbTests(unittest.TestCase):
     def test_fit_bulb(self):
         for decider in self.deciders:
             with self.subTest(decider=str(decider)):
+                # Event -> Command -> Event (state_change)
                 # Given a bulb that is not fitted
                 expected_events = [Bulb.FittedEvent(max_uses=5)]
 
@@ -40,12 +41,18 @@ class BulbTests(unittest.TestCase):
                 command = Bulb.FitCommand(max_uses=5)
                 result = decider.decide(command)
 
-                # Then I get the Bulb Fitted event
+                # Then I get the Bulb Fitted event (state_change)
                 self.assertEqual(result, expected_events)
+
+                # Event -> State (state_view)
+                # The state should now reflect that the bulb is fitted and can be used up to 5 times
+                self.assertIsInstance(decider.state, Bulb.FittedState)
+                self.assertEqual(decider.state.max_uses, 5)
 
     def test_switch_on_bulb(self):
         for decider in self.deciders:
             with self.subTest(decider=str(decider)):
+                # Event -> Command -> Event (state_change)
                 # Given a bulb that is fitted
                 decider.decide(Bulb.FitCommand(max_uses=5))  # Set initial state
                 expected_events = [Bulb.SwitchedOnEvent()]
@@ -54,48 +61,60 @@ class BulbTests(unittest.TestCase):
                 command = Bulb.SwitchOnCommand()
                 result = decider.decide(command)
 
-                # Then I get the Bulb SwitchedOn event
+                # Then I get the Bulb SwitchedOn event (state_change)
                 self.assertEqual(result, expected_events)
+
+                # Event -> State (state_view)
+                # The state should now reflect that the bulb is on
+                self.assertIsInstance(decider.state, Bulb.OnState)
 
     def test_bulb_switch_on_again(self):
         for decider in self.deciders:
             with self.subTest(decider=str(decider)):
+                # Event -> Command -> Event (state_change)
                 # Given a bulb that is fitted
                 decider.decide(
                     Bulb.FitCommand(max_uses=1)
                 )  # Set bulb to blow after one use
-                # And the bulb is switched on
                 decider.decide(Bulb.SwitchOnCommand())  # Use the bulb once
 
                 # When I switch on the bulb again
                 command = Bulb.SwitchOnCommand()
                 result = decider.decide(command)
 
-                # Then nothing should happen
+                # Then nothing should happen (state_change)
                 self.assertEqual(result, [])
+
+                # Event -> State (state_view)
+                # The state should still reflect that the bulb is on and has no remaining uses
+                self.assertIsInstance(decider.state, Bulb.BlownState)
 
     def test_bulb_blew(self):
         for decider in self.deciders:
             with self.subTest(decider=str(decider)):
+                # Event -> Command -> Event (state_change)
                 # Given a bulb that is fitted
                 decider.decide(
                     Bulb.FitCommand(max_uses=1)
                 )  # Set bulb to blow after one use
-                # And the bulb is switched on
                 decider.decide(Bulb.SwitchOnCommand())  # Use the bulb once
 
-                # When I switch off the bulb
+                # When I switch off the bulb and turn it on again
                 decider.decide(Bulb.SwitchOffCommand())
-                # And turn it on again
                 result = decider.decide(Bulb.SwitchOnCommand())
 
-                # Then I get the Bulb Blew event
+                # Then I get the Bulb Blew event (state_change)
                 expected_events = [Bulb.BlewEvent()]
                 self.assertEqual(result, expected_events)
+
+                # Event -> State (state_view)
+                # The state should now reflect that the bulb is blown
+                self.assertIsInstance(decider.state, Bulb.BlownState)
 
     def test_blown_bulb_does_not_react_to_commands(self):
         for decider in self.deciders:
             with self.subTest(decider=str(decider)):
+                # Event -> Command -> Event (state_change)
                 # Given a blown bulb
                 decider.decide(Bulb.FitCommand(max_uses=0))
                 decider.decide(Bulb.SwitchOnCommand())
@@ -104,14 +123,19 @@ class BulbTests(unittest.TestCase):
                 command = Bulb.SwitchOnCommand()
                 result = decider.decide(command)
 
-                # Then nothing should happen
+                # Then nothing should happen (state_change)
                 self.assertEqual(result, [])
+
                 # When I switch off the bulb
                 command = Bulb.SwitchOffCommand()
                 result = decider.decide(command)
 
-                # Then nothing should happen
+                # Then nothing should happen (state_change)
                 self.assertEqual(result, [])
+
+                # Event -> State (state_view)
+                # The state should now reflect that the bulb is blown
+                self.assertIsInstance(decider.state, Bulb.BlownState)
 
     def test_blown_state_is_terminal(self):
         self.assertTrue(Bulb.is_terminal(Bulb.BlownState()))

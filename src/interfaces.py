@@ -34,6 +34,12 @@ class DeciderAggregate(metaclass=DeciderMeta):
         ) -> List["DeciderAggregate.Event"]:
             raise NotImplementedError()
 
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}"
+
+    def __repr__(self) -> str:
+        return str(self)
+
     @classmethod
     @abc.abstractmethod
     def initial_state(cls) -> State:

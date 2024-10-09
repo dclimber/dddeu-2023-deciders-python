@@ -26,7 +26,13 @@ def compose_decider_aggregates(
                 self.decider_y_state = y_state
 
             def __str__(self) -> str:
-                return f"{self.__class__.__name__}({decider_x}, {decider_y})"
+                return (
+                    f"{self.__class__.__name__}({decider_x.__class__.__name__}"
+                    f", {decider_y.__class__.__name__})"
+                )
+
+            def __repr__(self) -> str:
+                return str(self)
 
             def evolve(
                 self, event: Union["ComposedDecider.EventX", "ComposedDecider.EventY"]
@@ -41,6 +47,9 @@ def compose_decider_aggregates(
 
         def __str__(self) -> str:
             return f"{self.__class__.__name__}({decider_x}, {decider_y})"
+
+        def __repr__(self) -> str:
+            return str(self)
 
         @classmethod
         def decide(

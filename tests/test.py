@@ -210,15 +210,16 @@ class CatAndBulbTests(unittest.TestCase):
                 )
                 # bulb is fitted
                 self.assertEqual(
-                    decider.decide(Bulb.FitCommand(max_uses=5)), [Bulb.FittedEvent()]
+                    decider.decide(Bulb.FitCommand(max_uses=5)),
+                    [Bulb.FittedEvent(max_uses=5)],
                 )
                 # bulb is on
                 self.assertEqual(
-                    decider.decide(Bulb.SwitchOnCommand()), [Bulb.OnEvent()]
+                    decider.decide(Bulb.SwitchOnCommand()), [Bulb.SwitchedOnEvent()]
                 )
                 # bulb is off
                 self.assertEqual(
-                    decider.decide(Bulb.SwitchOffCommand()), [Bulb.OffEvent()]
+                    decider.decide(Bulb.SwitchOffCommand()), [Bulb.SwitchedOffEvent()]
                 )
 
 

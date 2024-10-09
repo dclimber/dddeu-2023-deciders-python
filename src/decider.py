@@ -57,6 +57,7 @@ def compose_decider_aggregates(
             command: CommandX | CommandY,
             state: StateX | StateY | CombinedState,
         ) -> List["EventX"] | List["EventY"]:
+
             if isinstance(command, decider_x.Command) and (
                 isinstance(state, decider_x.State)
                 or isinstance(state, ComposedDecider.CombinedState)
@@ -82,25 +83,19 @@ def compose_decider_aggregates(
             cls,
             state: StateX | StateY | CombinedState,
             event: EventX | EventY,
-        ) -> StateX | StateY:
-            if isinstance(event, ComposedDecider.EventX) and (
-                isinstance(state, ComposedDecider.StateX)
-                or isinstance(state, ComposedDecider.CombinedState)
-            ):
+        ) -> StateX | StateY | CombinedState:
+            if isinstance(event, ComposedDecider.EventX):
                 if isinstance(state, ComposedDecider.CombinedState):
-                    x_state = state.decider_x_state
+                    x_state = decider_x.evolve(state.decider_x_state, event)
+                    return ComposedDecider.CombinedState(x_state, state.decider_y_state)
                 else:
-                    x_state = state
-                return decider_x.evolve(x_state, event)
-            elif isinstance(event, ComposedDecider.EventY) and (
-                isinstance(state, ComposedDecider.StateY)
-                or isinstance(state, ComposedDecider.CombinedState)
-            ):
+                    return decider_x.evolve(state, event)
+            elif isinstance(event, ComposedDecider.EventY):
                 if isinstance(state, ComposedDecider.CombinedState):
-                    y_state = state.decider_y_state
+                    y_state = decider_y.evolve(state.decider_y_state, event)
+                    return ComposedDecider.CombinedState(state.decider_x_state, y_state)
                 else:
-                    y_state = state
-                return decider_y.evolve(y_state, event)
+                    return decider_y.evolve(state, event)
             raise ValueError(f"Invalid event {event} or state {state}")
 
         @classmethod
@@ -110,11 +105,15 @@ def compose_decider_aggregates(
             )
 
         @classmethod
-        def is_terminal(cls, state: StateX | StateY) -> bool:
+        def is_terminal(cls, state: StateX | StateY | CombinedState) -> bool:
             if isinstance(state, ComposedDecider.StateX):
                 return decider_x.is_terminal(state)
             elif isinstance(state, ComposedDecider.StateY):
                 return decider_y.is_terminal(state)
+            elif isinstance(state, ComposedDecider.CombinedState):
+                return decider_x.is_terminal(
+                    state.decider_x_state
+                ) and decider_y.is_terminal(state.decider_y_state)
             raise ValueError(f"Invalid state {state}")
 
     return ComposedDecider()

@@ -188,15 +188,39 @@ class CatTests(unittest.TestCase):
                 self.assertEqual(result, [Cat.WokeUpEvent()])
 
 
-# class CatAndBulbTests(unittest.TestCase):
-#     def setUp(self) -> None:
-#         super().setUp()
-#         self.cat_and_bulb = compose_decider_aggregates(Cat, Bulb)
-#         self.deciders = [
-#             InMemoryDecider(self.cat_and_bulb),
-#             StateBasedDecider(Cat, cat_serializer, cat_deserializer, {}, "cat"),
-#             EventSourcingDecider(self.cat_and_bulb, "cat_and_bulb"),
-#         ]
+class CatAndBulbTests(unittest.TestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.cat_and_bulb = compose_decider_aggregates(Cat, Bulb)
+        self.deciders = [
+            InMemoryDecider(self.cat_and_bulb),
+            StateBasedDecider(Cat, cat_serializer, cat_deserializer, {}, "cat"),
+            EventSourcingDecider(self.cat_and_bulb, "cat_and_bulb"),
+        ]
+
+    def test_combo(self) -> None:
+        for decider in self.deciders:
+            with self.subTest(decider=str(decider)):
+                # cat wakes up
+                self.assertEqual(
+                    decider.decide(Cat.WakeUpCommand()), [Cat.WokeUpEvent()]
+                )
+                # cat goes to sleep
+                self.assertEqual(
+                    decider.decide(Cat.GoToSleepCommand()), [Cat.GotToSleepEvent()]
+                )
+                # bulb is fitted
+                self.assertEqual(
+                    decider.decide(Bulb.FitCommand(max_uses=5)), [Bulb.FittedEvent()]
+                )
+                # bulb is on
+                self.assertEqual(
+                    decider.decide(Bulb.SwitchOnCommand()), [Bulb.OnEvent()]
+                )
+                # bulb is off
+                self.assertEqual(
+                    decider.decide(Bulb.SwitchOffCommand()), [Bulb.OffEvent()]
+                )
 
 
 # class ComposedDeciderTests(unittest.TestCase):

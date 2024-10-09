@@ -194,7 +194,6 @@ class CatAndBulbTests(unittest.TestCase):
         self.cat_and_bulb = compose_decider_aggregates(Cat, Bulb)
         self.deciders = [
             InMemoryDecider(self.cat_and_bulb),
-            StateBasedDecider(Cat, cat_serializer, cat_deserializer, {}, "cat"),
             EventSourcingDecider(self.cat_and_bulb, "cat_and_bulb"),
         ]
 

@@ -200,13 +200,13 @@ class CatAndBulbTests(unittest.TestCase):
     def test_combo(self) -> None:
         for decider in self.deciders:
             with self.subTest(decider=str(decider)):
-                # cat wakes up
-                self.assertEqual(
-                    decider.decide(Cat.WakeUpCommand()), [Cat.WokeUpEvent()]
-                )
                 # cat goes to sleep
                 self.assertEqual(
                     decider.decide(Cat.GoToSleepCommand()), [Cat.GotToSleepEvent()]
+                )
+                # cat wakes up
+                self.assertEqual(
+                    decider.decide(Cat.WakeUpCommand()), [Cat.WokeUpEvent()]
                 )
                 # bulb is fitted
                 self.assertEqual(

@@ -33,7 +33,7 @@ def compose_decider_aggregates(
                 elif isinstance(event, ComposedDecider.EventY):
                     state_y = decider_y.initial_state()
                     return state_y.evolve(event)
-                raise ValueError("Invalid event")
+                raise ValueError(f"Invalid event {event}")
 
         def __str__(self) -> str:
             return f"{self.__class__.__name__}({decider_x}, {decider_y})"
@@ -62,7 +62,7 @@ def compose_decider_aggregates(
                 else:
                     y_state = state
                 return decider_y.decide(command, y_state)
-            raise ValueError("Invalid command or state")
+            raise ValueError(f"Invalid command {command} or state {state}")
 
         @classmethod
         def evolve(
@@ -100,6 +100,6 @@ def compose_decider_aggregates(
                 return decider_x.is_terminal(state)
             elif isinstance(state, ComposedDecider.StateY):
                 return decider_y.is_terminal(state)
-            raise ValueError("Invalid state")
+            raise ValueError(f"Invalid state {state}")
 
     return ComposedDecider()

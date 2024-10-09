@@ -15,19 +15,11 @@ from serializers import (
 class BulbTests(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.cat_and_bulb = compose_decider_aggregates(Cat, Bulb)
-        self.cat_and_2_bulbs = compose_decider_aggregates(
-            Cat, compose_decider_aggregates(Bulb, Bulb)
-        )
 
         self.deciders = [
             InMemoryDecider(Bulb),
             StateBasedDecider(Bulb, bulb_serializer, bulb_deserializer, {}, "bulb"),
             EventSourcingDecider(Bulb, "bulb"),
-            InMemoryDecider(self.cat_and_bulb),
-            EventSourcingDecider(self.cat_and_bulb, "cat_and_bulb"),
-            InMemoryDecider(self.cat_and_2_bulbs),
-            EventSourcingDecider(self.cat_and_2_bulbs, "cat_and_2_bulbs"),
         ]
 
     def test_fit_bulb(self):
@@ -45,9 +37,10 @@ class BulbTests(unittest.TestCase):
                 self.assertEqual(result, expected_events)
 
                 # Event -> State (state_view)
-                # The state should now reflect that the bulb is fitted and can be used up to 5 times
-                self.assertIsInstance(decider.state, Bulb.FittedState)
-                self.assertEqual(decider.state.max_uses, 5)
+                # The state should now reflect that the bulb is fitted and can be used
+                # up to 5 times
+                self.assertIsInstance(decider.state, Bulb.WorkingState)
+                self.assertEqual(decider.state.remaining_uses, 5)
 
     def test_switch_on_bulb(self):
         for decider in self.deciders:
@@ -66,7 +59,7 @@ class BulbTests(unittest.TestCase):
 
                 # Event -> State (state_view)
                 # The state should now reflect that the bulb is on
-                self.assertIsInstance(decider.state, Bulb.OnState)
+                self.assertIsInstance(decider.state, Bulb.WorkingState)
 
     def test_bulb_switch_on_again(self):
         for decider in self.deciders:
@@ -86,8 +79,9 @@ class BulbTests(unittest.TestCase):
                 self.assertEqual(result, [])
 
                 # Event -> State (state_view)
-                # The state should still reflect that the bulb is on and has no remaining uses
-                self.assertIsInstance(decider.state, Bulb.BlownState)
+                # The state should still reflect that the bulb is on and has no
+                # remaining uses
+                self.assertIsInstance(decider.state, Bulb.WorkingState)
 
     def test_bulb_blew(self):
         for decider in self.deciders:
@@ -145,18 +139,10 @@ class BulbTests(unittest.TestCase):
 class CatTests(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
-        self.cat_and_bulb = compose_decider_aggregates(Cat, Bulb)
-        self.cat_and_2_bulbs = compose_decider_aggregates(
-            Cat, compose_decider_aggregates(Bulb, Bulb)
-        )
         self.deciders = [
             InMemoryDecider(Cat),
             StateBasedDecider(Cat, cat_serializer, cat_deserializer, {}, "cat"),
             EventSourcingDecider(Cat, "cat"),
-            InMemoryDecider(self.cat_and_bulb),
-            EventSourcingDecider(self.cat_and_bulb, "cat_and_bulb"),
-            InMemoryDecider(self.cat_and_2_bulbs),
-            EventSourcingDecider(self.cat_and_2_bulbs, "cat_and_2_bulbs"),
         ]
 
     def test_is_terminal(self):
@@ -245,6 +231,171 @@ class CatAndBulbTests(unittest.TestCase):
                 self.assertEqual(
                     decider.decide(Bulb.SwitchOffCommand()), [Bulb.SwitchedOffEvent()]
                 )
+
+
+class CatAndBulbComposedTests(unittest.TestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.cat_and_bulb = compose_decider_aggregates(Cat, Bulb)
+        self.cat_and_2_bulbs = compose_decider_aggregates(
+            Cat, compose_decider_aggregates(Bulb, Bulb)
+        )
+
+        self.deciders = [
+            InMemoryDecider(self.cat_and_bulb),
+            EventSourcingDecider(self.cat_and_bulb, "cat_and_bulb"),
+        ]
+
+    def test_fit_bulb(self):
+        for decider in self.deciders:
+            with self.subTest(decider=str(decider)):
+                # Event -> Command -> Event (state_change)
+                # Given a bulb that is not fitted
+                expected_events = [Bulb.FittedEvent(max_uses=5)]
+
+                # When I fit the bulb
+                command = Bulb.FitCommand(max_uses=5)
+                result = decider.decide(command)
+
+                # Then I get the Bulb Fitted event (state_change)
+                self.assertEqual(result, expected_events)
+
+                # Event -> State (state_view)
+                # The state should now reflect that the bulb is fitted and can be used
+                # up to 5 times
+                self.assertIsInstance(decider.state.decider_y_state, Bulb.WorkingState)
+                self.assertEqual(decider.state.decider_y_state.remaining_uses, 5)
+
+    def test_switch_on_bulb(self):
+        for decider in self.deciders:
+            with self.subTest(decider=str(decider)):
+                # Event -> Command -> Event (state_change)
+                # Given a bulb that is fitted
+                decider.decide(Bulb.FitCommand(max_uses=5))  # Set initial state
+                expected_events = [Bulb.SwitchedOnEvent()]
+
+                # When I switch on the bulb
+                command = Bulb.SwitchOnCommand()
+                result = decider.decide(command)
+
+                # Then I get the Bulb SwitchedOn event (state_change)
+                self.assertEqual(result, expected_events)
+
+                # Event -> State (state_view)
+                # The state should now reflect that the bulb is on
+                self.assertIsInstance(decider.state.decider_y_state, Bulb.WorkingState)
+
+    def test_bulb_switch_on_again(self):
+        for decider in self.deciders:
+            with self.subTest(decider=str(decider)):
+                # Event -> Command -> Event (state_change)
+                # Given a bulb that is fitted
+                decider.decide(
+                    Bulb.FitCommand(max_uses=1)
+                )  # Set bulb to blow after one use
+                decider.decide(Bulb.SwitchOnCommand())  # Use the bulb once
+
+                # When I switch on the bulb again
+                command = Bulb.SwitchOnCommand()
+                result = decider.decide(command)
+
+                # Then nothing should happen (state_change)
+                self.assertEqual(result, [])
+
+                # Event -> State (state_view)
+                # The state should still reflect that the bulb is on and has no
+                # remaining uses
+                self.assertIsInstance(decider.state.decider_y_state, Bulb.WorkingState)
+
+    def test_bulb_blew(self):
+        for decider in self.deciders:
+            with self.subTest(decider=str(decider)):
+                # Event -> Command -> Event (state_change)
+                # Given a bulb that is fitted
+                decider.decide(
+                    Bulb.FitCommand(max_uses=1)
+                )  # Set bulb to blow after one use
+                decider.decide(Bulb.SwitchOnCommand())  # Use the bulb once
+
+                # When I switch off the bulb and turn it on again
+                decider.decide(Bulb.SwitchOffCommand())
+                result = decider.decide(Bulb.SwitchOnCommand())
+
+                # Then I get the Bulb Blew event (state_change)
+                expected_events = [Bulb.BlewEvent()]
+                self.assertEqual(result, expected_events)
+
+                # Event -> State (state_view)
+                # The state should now reflect that the bulb is blown
+                self.assertIsInstance(decider.state.decider_y_state, Bulb.BlownState)
+
+    def test_blown_bulb_does_not_react_to_commands(self):
+        for decider in self.deciders:
+            with self.subTest(decider=str(decider)):
+                # Event -> Command -> Event (state_change)
+                # Given a blown bulb
+                decider.decide(Bulb.FitCommand(max_uses=0))
+                decider.decide(Bulb.SwitchOnCommand())
+
+                # When I switch on the bulb
+                command = Bulb.SwitchOnCommand()
+                result = decider.decide(command)
+
+                # Then nothing should happen (state_change)
+                self.assertEqual(result, [])
+
+                # When I switch off the bulb
+                command = Bulb.SwitchOffCommand()
+                result = decider.decide(command)
+
+                # Then nothing should happen (state_change)
+                self.assertEqual(result, [])
+
+                # Event -> State (state_view)
+                # The state should now reflect that the bulb is blown
+                self.assertIsInstance(decider.state.decider_y_state, Bulb.BlownState)
+
+    def test_wake_up_command_initial_state_change(self):
+        for decider in self.deciders:
+            with self.subTest(decider=str(decider)):
+                # Given no events
+                # When I command the cat to wake up
+                command = Cat.WakeUpCommand()
+                result = decider.decide(command)
+                # Then nothing happens, as the cat is awake
+                self.assertEqual(result, [])
+
+    def test_go_to_sleep_command_state_change(self):
+        for decider in self.deciders:
+            with self.subTest(decider=str(decider)):
+                # Given no events
+                # When I command the cat to go to sleep
+                command = Cat.GoToSleepCommand()
+                result = decider.decide(command)
+                # Then cat goes to leep
+                self.assertEqual(result, [Cat.GotToSleepEvent()])
+
+    def test_got_to_sleep_state_view(self):
+        for decider in self.deciders:
+            with self.subTest(decider=str(decider)):
+                # Given cat is asleep
+                command = Cat.GoToSleepCommand()
+                decider.decide(command)
+                # When I ask for the state
+                # Then I get the cat is asleep
+                self.assertEqual(decider.state.decider_x_state, Cat.AsleepState())
+
+    def test_wake_up_command_state_change(self):
+        for decider in self.deciders:
+            with self.subTest(decider=str(decider)):
+                # Given cat is asleep
+                command = Cat.GoToSleepCommand()
+                decider.decide(command)
+                # When I command the cat to wake up
+                command = Cat.WakeUpCommand()
+                result = decider.decide(command)
+                # Then cat wakes up
+                self.assertEqual(result, [Cat.WokeUpEvent()])
 
 
 # class ComposedDeciderTests(unittest.TestCase):

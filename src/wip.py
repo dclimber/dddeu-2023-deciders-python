@@ -14,26 +14,26 @@ CY = TypeVar("CY")
 SY = TypeVar("SY")
 
 
-class Event(ABC):
+class BaseEvent(ABC):
     pass
 
 
-class Command(ABC):
+class BaseCommand(ABC):
     pass
 
 
-class State(ABC):
+class BaseState(ABC):
     pass
 
 
 class Aggregate(ABC, Generic[E, S]):
-    class Event(Event):
+    class Event(BaseEvent):
         pass
 
-    class Command(Command):
+    class Command(BaseCommand):
         pass
 
-    class State(State):
+    class State(BaseState):
         pass
 
     @property
@@ -68,13 +68,13 @@ class Decider(Aggregate[E, S], Generic[E, C, S]):
 
 class CatAggregate(Aggregate[Aggregate.State, Aggregate.Event]):
     # Custom cat events
-    class Event(Event):
+    class Event(Aggregate.Event):
         pass
 
-    class Command(Command):
+    class Command(Aggregate.Command):
         pass
 
-    class State(State):
+    class State(Aggregate.State):
         pass
 
     class Wakeup(Command):
@@ -113,7 +113,7 @@ class CatAggregate(Aggregate[Aggregate.State, Aggregate.Event]):
 
 
 class CatDecider(
-    Decider[CatAggregate.Command, CatAggregate.Event, CatAggregate.State], CatAggregate
+    Decider[CatAggregate.Event, CatAggregate.Command, CatAggregate.State], CatAggregate
 ):
     def decide(self, c: CatAggregate.Command, s: CatAggregate.State):
         match c, s:
@@ -127,15 +127,15 @@ class CatDecider(
 
 class BulbAggregate(Aggregate[Aggregate.State, Aggregate.Event]):
     @dataclasses.dataclass(frozen=True)
-    class Event(Event):
+    class Event(Aggregate.Event):
         pass
 
     @dataclasses.dataclass(frozen=True)
-    class Command(Command):
+    class Command(Aggregate.Command):
         pass
 
     @dataclasses.dataclass(frozen=True)
-    class State(State):
+    class State(Aggregate.State):
         pass
 
     @dataclasses.dataclass(frozen=True)
@@ -201,7 +201,7 @@ class BulbAggregate(Aggregate[Aggregate.State, Aggregate.Event]):
 
 
 class BulbDecider(
-    Decider[BulbAggregate.Command, BulbAggregate.Event, BulbAggregate.State],
+    Decider[BulbAggregate.Event, BulbAggregate.Command, BulbAggregate.State],
     BulbAggregate,
 ):
     def decide(self, c: BulbAggregate.Command, s: BulbAggregate.State):
@@ -229,15 +229,15 @@ class BulbDecider(
 
 class CatLight(Process[Aggregate.Event, Aggregate.State, Aggregate.Command]):
     @dataclasses.dataclass(frozen=True)
-    class Event(Event):
+    class Event(Aggregate.Event):
         pass
 
     @dataclasses.dataclass(frozen=True)
-    class Command(Command):
+    class Command(Aggregate.Command):
         pass
 
     @dataclasses.dataclass(frozen=True)
-    class State(State):
+    class State(Aggregate.State):
         pass
 
     class SwitchedOn(Event):
@@ -255,7 +255,7 @@ class CatLight(Process[Aggregate.Event, Aggregate.State, Aggregate.Command]):
     class WakingUp(State):
         pass
 
-    def evolve(self, s: State, e: Event):
+    def evolve(self, s: Aggregate.State, e: Aggregate.Event):
         match e:
             case self.SwitchedOn():
                 return self.WakingUp()
@@ -327,7 +327,7 @@ def compose(dx: Decider[CX, EX, SX], dy: Decider[CY, EY, SY]) -> Decider[C, E, S
 
         @property
         def initial_state(self) -> S:
-            return None
+            raise NotImplementedError() # todo: Composite type <SY, SX>
 
     return ComposedDecider()
 

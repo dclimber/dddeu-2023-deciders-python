@@ -113,7 +113,8 @@ class CatAggregate(Aggregate[Aggregate.State, Aggregate.Event]):
 
 
 class CatDecider(
-    Decider[CatAggregate.Event, CatAggregate.Command, CatAggregate.State], CatAggregate  # NOQA: E501
+    Decider[CatAggregate.Event, CatAggregate.Command, CatAggregate.State],
+    CatAggregate,  # NOQA: E501
 ):
     def decide(self, c: CatAggregate.Command, s: CatAggregate.State):
         match c, s:
@@ -184,13 +185,17 @@ class BulbAggregate(Aggregate[Aggregate.State, Aggregate.Event]):
     def evolve(self, s, e):
         match (s, e):
             case (self.NotFittedState(), self.FittedEvent()):
-                return self.WorkingState(status="On", remaining_uses=e.max_uses)  # NOQA: E501
+                return self.WorkingState(
+                    status="On", remaining_uses=e.max_uses
+                )  # NOQA: E501
             case (self.WorkingState(), self.SwitchedOnEvent()):
                 return self.WorkingState(
                     status="On", remaining_uses=s.remaining_uses - 1
                 )
             case (self.WorkingState(), self.SwitchedOffEvent()):
-                return self.WorkingState(status="Off", remaining_uses=s.remaining_uses)  # NOQA: E501
+                return self.WorkingState(
+                    status="Off", remaining_uses=s.remaining_uses
+                )  # NOQA: E501
             case (self.WorkingState(), self.BlewEvent()):
                 return self.BlewEvent()
             case _:
@@ -284,7 +289,9 @@ class CatLight(Process[Aggregate.Event, Aggregate.State, Aggregate.Command]):
                 return []
 
 
-class ApplicativeCompose(Decider[Aggregate.Command, Aggregate.Event, Aggregate.Event]):  # NOQA: E501
+class ApplicativeCompose(
+    Decider[Aggregate.Command, Aggregate.Event, Aggregate.Event]
+):  # NOQA: E501
     def decide(self, c, s):
         match c:
             case BulbAggregate.SwitchedOnEvent():
@@ -307,7 +314,9 @@ class ApplicativeCompose(Decider[Aggregate.Command, Aggregate.Event, Aggregate.E
 def compose(
     dx: Decider[CX, EX, SX], dy: Decider[CY, EY, SY]
 ) -> Decider[Aggregate.Command, Aggregate.Event, Aggregate.State]:
-    class ComposedDecider(Decider[Aggregate.Command, Aggregate.Event, Aggregate.State]):  # NOQA: E501
+    class ComposedDecider(
+        Decider[Aggregate.Command, Aggregate.Event, Aggregate.State]
+    ):  # NOQA: E501
 
         def decide(self, c, s):
             match c:
@@ -337,11 +346,16 @@ def compose(
 def combine_process_with_decider(
     process: Process[E, S, C], decider: Decider[CY, EY, SY]
 ) -> Decider[CY, EY, tuple[S, SY]]:
-    class ProcessDecider(Decider[C, E, S], Generic[C, E, S]):
+    class ProcessDecider(
+        Decider[Aggregate.Event, Aggregate.Command, tuple[S, SY]]
+    ):  # NOQA: E501
 
         def collect_fold(
-            self, process: Process[E, S, C], state: S, events: list[E]
-        ) -> list[C]:
+            self,
+            process: Process[Aggregate.Event, Aggregate.State, Aggregate.Command],
+            state: Aggregate.State,
+            events: list[Aggregate.Event],
+        ) -> list[Aggregate.Command]:
             commands: list[Aggregate.Command] = []
             while len(events) > 0:
                 event = events.pop(0)
@@ -350,14 +364,16 @@ def combine_process_with_decider(
                     commands.append(cmd)
             return commands
 
-        def decide(self, c, s: tuple[S, SY]):
+        def decide(self, c, s: tuple[S, SY]) -> Iterable[Aggregate.Event]:
             (process_state, decider_state) = s
             commands = [c]
-            events = []
+            events: list[Aggregate.Event] = []
             while len(commands) > 0:
                 command = commands.pop(0)
-                events.extend(decider.decide(command, decider_state))
-                commands.extend(self.collect_fold(self.process), process_state)
+                for event in decider.decide(command, decider_state):
+                    events.append(event)
+                for cmd in self.collect_fold(self.process, process_state, events):
+                    commands.append(cmd)
             return events
 
     return ProcessDecider()

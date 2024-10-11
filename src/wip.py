@@ -113,7 +113,7 @@ class CatAggregate(Aggregate[Aggregate.State, Aggregate.Event]):
 
 
 class CatDecider(
-    Decider[CatAggregate.Event, CatAggregate.Command, CatAggregate.State], CatAggregate
+    Decider[CatAggregate.Event, CatAggregate.Command, CatAggregate.State], CatAggregate  # NOQA: E501
 ):
     def decide(self, c: CatAggregate.Command, s: CatAggregate.State):
         match c, s:
@@ -184,13 +184,13 @@ class BulbAggregate(Aggregate[Aggregate.State, Aggregate.Event]):
     def evolve(self, s, e):
         match (s, e):
             case (self.NotFittedState(), self.FittedEvent()):
-                return self.WorkingState(status="On", remaining_uses=e.max_uses)
+                return self.WorkingState(status="On", remaining_uses=e.max_uses)  # NOQA: E501
             case (self.WorkingState(), self.SwitchedOnEvent()):
                 return self.WorkingState(
                     status="On", remaining_uses=s.remaining_uses - 1
                 )
             case (self.WorkingState(), self.SwitchedOffEvent()):
-                return self.WorkingState(status="Off", remaining_uses=s.remaining_uses)
+                return self.WorkingState(status="Off", remaining_uses=s.remaining_uses)  # NOQA: E501
             case (self.WorkingState(), self.BlewEvent()):
                 return self.BlewEvent()
             case _:
@@ -284,7 +284,7 @@ class CatLight(Process[Aggregate.Event, Aggregate.State, Aggregate.Command]):
                 return []
 
 
-class ApplicativeCompose(Decider[Aggregate.Command, Aggregate.Event, Aggregate.Event]):
+class ApplicativeCompose(Decider[Aggregate.Command, Aggregate.Event, Aggregate.Event]):  # NOQA: E501
     def decide(self, c, s):
         match c:
             case BulbAggregate.SwitchedOnEvent():
@@ -304,8 +304,10 @@ class ApplicativeCompose(Decider[Aggregate.Command, Aggregate.Event, Aggregate.E
     #         combo
 
 
-def compose(dx: Decider[CX, EX, SX], dy: Decider[CY, EY, SY]) -> Decider[C, E, S]:
-    class ComposedDecider(Decider[C, E, S], Generic[C, E, S]):
+def compose(
+    dx: Decider[CX, EX, SX], dy: Decider[CY, EY, SY]
+) -> Decider[Aggregate.Command, Aggregate.Event, Aggregate.State]:
+    class ComposedDecider(Decider[Aggregate.Command, Aggregate.Event, Aggregate.State]):  # NOQA: E501
 
         def decide(self, c, s):
             match c:
@@ -326,8 +328,8 @@ def compose(dx: Decider[CX, EX, SX], dy: Decider[CY, EY, SY]) -> Decider[C, E, S
             return dx.is_terminal() and dy.is_terminal()
 
         @property
-        def initial_state(self) -> S:
-            raise NotImplementedError() # todo: Composite type <SY, SX>
+        def initial_state(self) -> Aggregate.State:
+            raise NotImplementedError()  # todo: Composite type <SY, SX>
 
     return ComposedDecider()
 
@@ -340,11 +342,12 @@ def combine_process_with_decider(
         def collect_fold(
             self, process: Process[E, S, C], state: S, events: list[E]
         ) -> list[C]:
-            commands = []
+            commands: list[Aggregate.Command] = []
             while len(events) > 0:
                 event = events.pop(0)
                 state = process.evolve(state, events.pop(0))
-                commands.extend(process.react(state, event))
+                for cmd in process.react(state, event):
+                    commands.append(cmd)
             return commands
 
         def decide(self, c, s: tuple[S, SY]):
